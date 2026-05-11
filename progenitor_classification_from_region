@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+
+from collections import defaultdict
+
+input_file = "lncRNAs_with_parental.bed"
+output_file = "transcript_parental_classification.txt"
+
+# ---------------------------------------------------
+# Armazenar classificações por transcript
+# ---------------------------------------------------
+
+transcripts = defaultdict(set)
+
+with open(input_file) as f:
+
+    for line in f:
+
+        cols = line.strip().split("\t")
+
+        transcript = cols[3]
+        parental = cols[6]
+
+        transcripts[transcript].add(parental)
+
+# ---------------------------------------------------
+# Classificar transcript
+# ---------------------------------------------------
+
+with open(output_file, "w") as out:
+
+    out.write("Transcript\tClassification\n")
+
+    for transcript, parents in sorted(transcripts.items()):
+
+        # remover possíveis duplicatas
+        parents = set(parents)
+
+        if parents == {"Ss"}:
+            classification = "Ss"
+
+        elif parents == {"So"}:
+            classification = "So"
+
+        elif parents == {"NA"}:
+            classification = "NA"
+
+        # qualquer combinação contendo Ss e So
+        elif "Ss" in parents and "So" in parents:
+            classification = "Both"
+
+        # casos mistos com NA
+        elif parents == {"Ss", "NA"}:
+            classification = "Ss"
+
+        elif parents == {"So", "NA"}:
+            classification = "So"
+
+        elif parents == {"Ss", "So", "NA"}:
+            classification = "Both"
+
+        else:
+            classification = "NA"
+
+        out.write(f"{transcript}\t{classification}\n")
+
+print(f"Arquivo salvo: {output_file}")
