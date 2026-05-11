@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+# arquivos de entrada
+bed_file = "Final_lncRNA_sequences_todas_cdhit_c09_cov09_R570_minimap2.bed"
+blocks_file = "/home/jnunes/Documents/temático/R570_cromossomos/material_supl_R570/Progenitor_Block_Assignments.txt"
+
+# saída
+output_file = "lncRNAs_with_parental.bed"
+
+# ---------------------------------------------------------
+# Ler blocos progenitores
+# ---------------------------------------------------------
+
+blocks = {}
+
+with open(blocks_file) as f:
+    for line in f:
+        if line.startswith("#") or line.startswith("Chromosome"):
+            continue
+
+        cols = line.strip().split()
+
+        chrom = cols[0]
+        progenitor = cols[1]
+        start = int(cols[2])
+        end = int(cols[3])
+
+        if chrom not in blocks:
+            blocks[chrom] = []
+
+        blocks[chrom].append((start, end, progenitor))
+
+# ---------------------------------------------------------
+# Função para encontrar progenitor
+# ---------------------------------------------------------
+
+def get_parental(chrom, start, end):
+
+    if chrom not in blocks:
+        return "NA"
+
+    for bstart, bend, progenitor in blocks[chrom]:
+
+        # overlap BED x bloco
+        if start < bend and end > bstart:
+            return progenitor
+
+    return "NA"
+
+# ---------------------------------------------------------
+# Processar BED
+# ---------------------------------------------------------
+
+with open(bed_file) as bed, open(output_file, "w") as out:
+
+    for line in bed:
+
+        cols = line.strip().split()
+
+        chrom = cols[0]
+        start = int(cols[1])
+        end = int(cols[2])
+
+        parental = get_parental(chrom, start, end)
+
+        new_line = cols + [parental]
+
+        out.write("\t".join(map(str, new_line)) + "\n")
+
+print(f"Arquivo salvo: {output_file}")
