@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+import pandas as pd
+
+# arquivos de entrada
+bed_file = "lncRNAs_with_parental.bed"
+sizes_file = "SofficinarumxspontaneumR570_771_v2.0.softmasked_sequences_sizes.tsv"
+
+# -----------------------------
+# lê tamanhos dos cromossomos
+# -----------------------------
+sizes = pd.read_csv(sizes_file, sep="\t")
+
+sizes.columns = ["chrom", "length"]
+
+# remove header estranho se existir
+sizes = sizes[sizes["chrom"] != "Sequence"]
+
+# -----------------------------
+# lê BED de lncRNAs
+# -----------------------------
+bed = pd.read_csv(
+    bed_file,
+    sep="\t",
+    header=None,
+    usecols=[0, 1, 2, 3],
+    names=["chrom", "start", "end", "lncRNA"]
+)
+
+# -----------------------------
+# conta lncRNAs por cromossomo
+# -----------------------------
+counts = (
+    bed.groupby("chrom")["lncRNA"]
+    .nunique()
+    .reset_index(name="n_lncRNAs")
+)
+
+# -----------------------------
+# junta com tamanho cromossômico
+# -----------------------------
+df = sizes.merge(counts, on="chrom", how="left")
+
+# cromossomos sem lncRNA recebem 0
+df["n_lncRNAs"] = df["n_lncRNAs"].fillna(0).astype(int)
+
+# tamanho em Mb
+df["length_mb"] = df["length"] / 1_000_000
+
+# densidade = lncRNAs por Mb
+df["lncRNAs_per_mb"] = df["n_lncRNAs"] / df["length_mb"]
+
+# ordena por densidade
+df = df.sort_values("lncRNAs_per_mb", ascending=False)
+
+# salva resultado
+df.to_csv("lncRNA_density_per_mb.tsv", sep="\t", index=False)
+
+print(df.head())
+
+print("\nArquivo salvo:")
+print("lncRNA_density_per_mb.tsv")
